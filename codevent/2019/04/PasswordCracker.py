@@ -1,6 +1,8 @@
 input = list(map(str,range(347312,805915)))
 
-def test_rules(n):
+from itertools import groupby
+
+def rules(n):
     consecutive = False
     for x, y in zip(n, n[1:]):
         if x > y:
@@ -9,7 +11,15 @@ def test_rules(n):
             consecutive = True
     return consecutive
 
+def truly_consecutive(n):
+    groups = []
+    for _, g in groupby(n):
+        groups.append(list(g))
+    if 2 in list(map(len, groups)):
+        return True
+    return False
+
 if __name__ == '__main__':
-    passing = list(filter(test_rules, input))
-    
-    print(len(passing))
+    passing = list(filter(rules, input))
+    answer = list(filter(truly_consecutive, passing))
+    print(len(answer))
