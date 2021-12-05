@@ -48,10 +48,11 @@ class InputReader():
 
 if __name__ == "__main__":
     # for round 1, only consider straight lines
-    f = lambda x: x[0][0] == x[1][0] or x[0][1] == x[1][1]
+    # f = lambda x: x[0][0] == x[1][0] or x[0][1] == x[1][1]
 
     ir = InputReader()
-    coordinates = filter(f, ir.coordinates)
+    # coordinates = filter(f, ir.coordinates)
+    coordinates = ir.coordinates
     points = chain.from_iterable(map(generate_all_points, coordinates))
     counts = Counter(points)
     intersects = [v for k, v in counts.items() if v > 1]
