@@ -1,54 +1,67 @@
-class Cave():
-    def __init__(self, name):
-        self.name = name
-        self.dead_end = False
-        if name.lower() == name:
-            self.visits_limited = True
-        else:
-            self.visits_limited = False
-        self.connections = []
-    def create_edge(self, destination):
-        self.connections.append(destination)
-    def __repr__(self):
-        return self.name
+from collections import defaultdict
 
-class System():
+class CaveSystem():
     def __init__(self):
-        self.caves = []
-        self.routes = []
-    def find_cave(self, name):
-        c = None
-        for i, cave in enumerate(self.caves):
-            if cave.name == name:
-                c = self.caves[i]
-        if not c:
-            self.caves.append(Cave(name))
-            c = self.caves[-1]
-        return c
-    def generate_caves_and_edges(self, input_file_path="input.txt"):
-        with open (input_file_path, "r") as input:
+        self.caves = defaultdict(list)
+        self.paths = list()
+
+    @property
+    def path_count(self):
+        return len(self.paths)
+
+    def is_small_cave(self, name):
+        return name.islower()
+
+    def get_neighbors(self, name):
+        return self.caves[name]
+
+    def can_visit_cave(self, name, path):
+        f = lambda x: self.is_small_cave(x) and x not in ["start", "end"]
+        helper = lambda x: path.count(x)
+        # if name in ["start", "end"] and name in path:
+        #     return False
+        # elif max(map(helper, filter(f, path))) == 2:
+        #     return False
+        # return True
+        if not self.is_small_cave(name):
+            return True
+        elif max(map(helper, filter(f, path))) <= 2:
+            return True
+        return False
+
+    def ingest_data(self, input_file_path="input.txt"):
+        self.caves = defaultdict(list)
+        self.paths = list()
+        with open(input_file_path, "r") as input:
             for edge in input:
-                e = edge.strip().split("-")
-                first = self.find_cave(e[0])
-                second = self.find_cave(e[1])
-                first.create_edge(second)
-                second.create_edge(first)
-    def mark_dead_ends(self):
-        for cave in self.caves:
-            if cave.visits_limited and len(cave.connections) == 1 and cave.name not in ["start", "end"]:
-                cave.dead_end = True
-    def map_route(self, starting_point="end", visited=[]):
-        current = self.find_cave(starting_point)
-        visited.append(current)
-        for edge in current.connections:
-            c = self.find_cave(edge.name)
-            if (c.visits_limited and c in visited) or c.dead_end:
-                return visited
-            else:
-                return visited + self.map_route(edge.name, visited)
+                first, second = edge.strip().split("-")
+                self.caves[first].append(second)
+                self.caves[second].append(first)
 
+    def _find_path(self, current="start", end="end", path=None, can_visit_again=True):
+        if path is None:
+            path = []
 
-system = System()
-system.generate_caves_and_edges("test_input_0.txt")
-system.mark_dead_ends()
-system.routes.extend(system.map_route("end"))
+        path += [current]
+
+        if current == end:
+            return [path]
+
+        paths = []
+        for neighbor in self.get_neighbors(current):
+            if not self.is_small_cave(neighbor) or neighbor not in path:
+            # print(neighbor, path, self.can_visit_cave(neighbor, path))
+            # if self.can_visit_cave(neighbor, path):
+                continued_paths = self._find_path(neighbor, end, list(path), can_visit_again)
+                for p in continued_paths:
+                    paths.append(p)
+            elif can_visit_again and neighbor not in ["start", "end"]:
+                continued_paths = self._find_path(neighbor, end, list(path), False)
+                for p in continued_paths:
+                    paths.append(p)
+
+        return paths
+
+    def find_paths(self, start="start", end="end"):
+        self.paths = self._find_path(start, end)
+        return self.path_count
