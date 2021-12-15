@@ -1,4 +1,5 @@
 import networkx as nx
+import numpy as np
 
 class InputReader():
     def __init__(self, input_file_path="input.txt"):
@@ -9,6 +10,25 @@ class InputReader():
             for row in input:
                 r = [int(risk) for risk in row.strip()]
                 self.risk_matrix.append(r)
+
+
+def generate_full_matrix(matrix, tiles=5):
+    m = np.array([])
+    for y in range(tiles):
+        r = np.array([])
+        for x in range(tiles):
+            tile = np.array(matrix) + x + y
+            tile = tile % 9
+            tile[tile == 0] = 9
+            if r.size == 0:
+                r = np.copy(tile)
+            else:
+                r = np.concatenate((r, tile), axis=1)
+        if m.size == 0:
+            m = np.copy(r)
+        else:
+            m = np.concatenate((m, r), axis=0)
+    return m
 
 
 def find_neighbors(matrix, location, but_not=None):
@@ -61,9 +81,10 @@ def generate_graph(edges):
 if __name__ == "__main__":
     ir = InputReader("input.txt")
     rm = ir.risk_matrix
+    fm = generate_full_matrix(rm)
     edges = generate_edges(rm)
     graph = generate_graph(edges)
-    shortest_path = nx.dijkstra_path(graph, (0, 0), (9, 9))
-    risk_getter = lambda m, x, y: m[y][x]
-    risks = [risk_getter(rm, x, y) for node in shortest_path for x, y in node]
+    shortest_path = nx.dijkstra_path(graph, (0, 0), (49, 49))
+    risk_getter = lambda m, x, y: m[y][x] if (x, y) != (0, 0) else 0
+    risks = [risk_getter(fm, x, y) for x, y in shortest_path]
     print(sum(risks))
