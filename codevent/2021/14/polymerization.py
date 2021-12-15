@@ -1,6 +1,4 @@
-from collections import Counter
-from functools import reduce
-from itertools import chain
+from collections import Counter, defaultdict
 
 
 def generate_pairs(polymer_tempalte):
@@ -33,6 +31,20 @@ def generate_polymer(initial_pairs, rules, iterations):
         polymer_pairs = generate_pairs(polymer_string)
     return polymer_pairs
 
+
+def memoize_insertions(template, rules, iterations):
+    element_counts = Counter(template)
+    polymer = Counter(["".join(p) for p in zip(template, template[1:])])
+    for _ in range(iterations):
+        synthesizing = defaultdict(int)
+        for pair in polymer.keys():
+            first_element, second_element = pair
+            new_element = rules[pair]
+            synthesizing[first_element + new_element] += polymer[pair]
+            synthesizing[new_element + second_element] += polymer[pair]
+            element_counts[new_element] += polymer[pair]
+        polymer = synthesizing
+    return element_counts
 
 class InputReader():
     def __init__(self, input_file_path="input.txt"):
