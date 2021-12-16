@@ -62,7 +62,7 @@ class OperatorPacket(Packet):
         )
 
     def __repr__(self):
-        return f"OperatorPacket<({self.version})>"
+        return f"OperatorPacket<(Version: {self.version}. Subpackets: {len(self.subpackets)})>"
 
 
 class ValuePacket(Packet):
@@ -87,10 +87,10 @@ class ValuePacket(Packet):
         value_binary = ""
         for n in range(0, len(v), 5):
             value_binary += v[n:n+5][-4:]
+        self.value = convert_binary(value_binary)
 
     def __repr__(self):
-        return f"ValuePacket<({self.version})>"
-
+        return f"ValuePacket<(Version: {self.version}. Value: {self.value})>"
 
 class Transmission:
     def __init__(self, transmission):
@@ -113,6 +113,7 @@ class Transmission:
         type_id_end = version_end + 3
         version = convert_binary(packet[packet_begin:version_end])
         type_id = convert_binary(packet[version_end:type_id_end])
+        subpackets = []
 
         if type_id != 4:
             p = OperatorPacket
@@ -125,10 +126,16 @@ class Transmission:
                     packet[length_type_end:subpacket_length_end]
                 )
                 subpackets_begin = subpacket_length_end
-                subpackets_end = subpacket_length_end + subpacket_length
+                subpackets_end = subpackets_begin + subpacket_length
+                subpacket_binary = packet[subpackets_begin:subpackets_end]
 
-                packet_end = subpackets_begin
-                subpackets = packet[subpacket_length_end:packet_end]
+                reading = True
+                while reading:
+                    reading, subpacket, subpacket_binary = self.packet_reader(subpacket_binary)
+                    if subpacket:
+                        subpackets.append(subpacket)
+
+                packet_end = subpackets_end
                 remainder = packet[packet_end:]
 
             if length_type == 1:
@@ -137,12 +144,14 @@ class Transmission:
                     packet[length_type_end:number_of_packets_end]
                 )
                 subpackets_begin = number_of_packets_end
-                subpacket_length = 11 * number_of_packets
-                subpackets_end = subpackets_begin + subpacket_length
+                remainder = packet[subpackets_begin:]
+
+                for i in range(number_of_packets):
+                    _, subpacket, remainder = self.packet_reader(remainder)
+                    if subpacket:
+                        subpackets.append(subpacket)
 
                 packet_end = subpackets_begin
-                subpackets = packet[number_of_packets_end:packet_end]
-                remainder = packet[packet_end:]
 
         elif type_id == 4:
             p = ValuePacket
