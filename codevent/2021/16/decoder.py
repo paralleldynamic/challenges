@@ -1,6 +1,10 @@
+from functools import reduce
+from operator import add, mul
+
+from timeit import default_timer as timer
+
 def convert_binary(b):
     return int(b, 2)
-
 
 class InputReader:
     def __init__(self, input_file_path=None):
@@ -43,6 +47,16 @@ class Packet:
 
 
 class OperatorPacket(Packet):
+    OPS = {
+        0: lambda x: reduce(add, x, 0),
+        1: lambda x: reduce(mul, x, 1),
+        2: lambda x: min(x),
+        3: lambda x: max(x),
+        5: lambda x: 1 if x[0] > x[1] else 0,
+        6: lambda x: 1 if x[0] < x[1] else 0,
+        7: lambda x: 1 if x[0] == x[1] else 0
+    }
+
     def __init__(
         self,
         binary,
@@ -60,6 +74,15 @@ class OperatorPacket(Packet):
             type_id,
             subpackets,
         )
+        self.op = OperatorPacket.OPS[type_id]
+
+    def version_sum(self):
+        versions = sum(map(lambda x: x.version_sum(), self.subpackets))
+        return versions + self.version
+
+    def evaluate(self):
+        vals = list(map(lambda x: x.evaluate(), self.subpackets))
+        return self.op(vals)
 
     def __repr__(self):
         return f"OperatorPacket<(Version: {self.version}. Subpackets: {len(self.subpackets)})>"
@@ -88,6 +111,12 @@ class ValuePacket(Packet):
         for n in range(0, len(v), 5):
             value_binary += v[n:n+5][-4:]
         self.value = convert_binary(value_binary)
+
+    def version_sum(self):
+        return self.version
+
+    def evaluate(self):
+        return self.value
 
     def __repr__(self):
         return f"ValuePacket<(Version: {self.version}. Value: {self.value})>"
@@ -179,3 +208,16 @@ class Transmission:
             subpackets=subpackets,
         )
         return True, _packet, remainder
+
+if __name__ == "__main__":
+    start = timer()
+    ir = InputReader()
+    ir.ingest_data("input.txt")
+    t = Transmission(ir.transmission)
+    p = t.packets[0]
+    version_sum = p.version_sum()
+    solution = p.evaluate()
+    print(f"Part 1: {version_sum}")
+    print(F"Part 2: {solution}")
+    end = timer()
+    print(f"Runtime was {end - start} seconds")
