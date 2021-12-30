@@ -56,6 +56,7 @@ def fold(matrix, axis, fold_index):
 class Paper():
     def __init__(self):
         self.matrix = []
+
     def ingest_data(self, input_file_path="input.txt"):
         marks = []
         fold_instructions = []
